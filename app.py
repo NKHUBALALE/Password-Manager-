@@ -21,7 +21,16 @@ st.title("Password Manager")
 
 st.subheader("Set New Password")
 
-# Password Input
+st.info(
+    "Password rules:\n"
+    "- Minimum 8 characters\n"
+    "- At least one lowercase letter\n"
+    "- At least one uppercase letter\n"
+    "- At least one number\n"
+    "- At least one special character\n"
+    "- Must satisfy at least 4 of the rules"
+)
+
 st.session_state.new_password = st.text_input(
     "Enter new password",
     type="password",
@@ -38,7 +47,6 @@ if password:
     st.progress(strength_score / 5)
     st.write(f"Strength: {strength_label}")
 
-# Disable button unless strong enough
 update_disabled = strength_score < 4
 
 if st.button("Update Password", disabled=update_disabled):
@@ -50,7 +58,6 @@ if st.button("Update Password", disabled=update_disabled):
     else:
         st.error(message)
 
-# Forced Verification Section
 if st.session_state.verification_required:
     st.divider()
     st.subheader("Verify Password")
@@ -67,7 +74,6 @@ if st.session_state.verification_required:
         if verified:
             st.success("Password confirmed successfully.")
 
-            # Auto-clear fields
             st.session_state.new_password = ""
             st.session_state.verify_password = ""
             st.session_state.verification_required = False
