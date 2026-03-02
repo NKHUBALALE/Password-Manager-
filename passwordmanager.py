@@ -2,6 +2,8 @@ import re
 import hashlib
 import json
 import os
+import random
+import string
 
 
 class PasswordManager:
@@ -14,9 +16,6 @@ class PasswordManager:
 
         self._load()
 
-    # ---------------------------
-    # Storage Handling
-    # ---------------------------
     def _load(self):
         if os.path.exists(self.file):
             try:
@@ -32,15 +31,9 @@ class PasswordManager:
                 "password_history": self.password_history
             }, f)
 
-    # ---------------------------
-    # Hashing
-    # ---------------------------
     def _hash_password(self, password: str) -> str:
         return hashlib.sha256(password.encode()).hexdigest()
 
-    # ---------------------------
-    # Strength Calculation
-    # ---------------------------
     def calculate_strength(self, password: str) -> int:
         score = 0
 
@@ -55,7 +48,7 @@ class PasswordManager:
         if re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
             score += 1
 
-        return score  # 0–5
+        return score
 
     def strength_label(self, score: int) -> str:
         if score <= 2:
@@ -64,9 +57,6 @@ class PasswordManager:
             return "Medium"
         return "Strong"
 
-    # ---------------------------
-    # Password Verification
-    # ---------------------------
     def verify_password(self, attempt: str):
         if self.locked:
             return False, "Account is locked due to multiple failed attempts."
@@ -88,9 +78,6 @@ class PasswordManager:
 
         return False, f"Incorrect password. Attempts left: {3 - self.failed_attempts}"
 
-    # ---------------------------
-    # Set Password
-    # ---------------------------
     def set_password(self, new_password: str):
         if self.locked:
             return False, "Account is locked. Cannot change password."
@@ -110,9 +97,29 @@ class PasswordManager:
 
         return True, "Password successfully updated."
 
-    # ---------------------------
-    # Utilities
-    # ---------------------------
+    def generate_password(self, length: int = 10):
+
+        lowercase = string.ascii_lowercase
+        uppercase = string.ascii_uppercase
+        digits = string.digits
+        special = "!@#$%^&*(),.?\":{}|<>"
+
+        password_chars = [
+            random.choice(lowercase),
+            random.choice(uppercase),
+            random.choice(digits),
+            random.choice(special),
+        ]
+
+        all_chars = lowercase + uppercase + digits + special
+
+        while len(password_chars) < length:
+            password_chars.append(random.choice(all_chars))
+
+        random.shuffle(password_chars)
+
+        return "".join(password_chars)
+
     def get_password_count(self):
         return len(self.password_history)
 
