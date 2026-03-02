@@ -31,11 +31,20 @@ st.info(
     "- Must satisfy at least 4 of the rules"
 )
 
-st.session_state.new_password = st.text_input(
-    "Enter new password",
-    type="password",
-    key="new_password_input"
-)
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    st.session_state.new_password = st.text_input(
+        "Enter new password",
+        type="password",
+        key="new_password_input"
+    )
+
+with col2:
+    if st.button("Generate"):
+        generated = pm.generate_password()
+        st.session_state.new_password = generated
+        st.rerun()
 
 password = st.session_state.new_password
 strength_score = 0
