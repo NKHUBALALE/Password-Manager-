@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 from passwordmanager import PasswordManager
 
 st.set_page_config(page_title="Password Manager", layout="centered")
@@ -14,6 +15,9 @@ if "new_password" not in st.session_state:
 
 if "verify_password" not in st.session_state:
     st.session_state.verify_password = ""
+
+if "generated_password" not in st.session_state:
+    st.session_state.generated_password = ""
 
 pm = st.session_state.pm
 
@@ -31,20 +35,23 @@ st.info(
     "- Must satisfy at least 4 of the rules"
 )
 
-col1, col2 = st.columns([3, 1])
+st.markdown("### Need help?")
 
-with col1:
-    st.session_state.new_password = st.text_input(
-        "Enter new password",
-        type="password",
-        key="new_password_input"
+if st.button("Generate strong password"):
+    pwd = pm.generate_password()
+    st.session_state.new_password = pwd
+    st.session_state.generated_password = pwd
+
+if st.session_state.generated_password:
+    st.success(
+        f"Generated password: {st.session_state.generated_password}"
     )
 
-with col2:
-    if st.button("Generate"):
-        generated = pm.generate_password()
-        st.session_state.new_password = generated
-        st.rerun()
+st.text_input(
+    "Enter new password",
+    type="password",
+    key="new_password"
+)
 
 password = st.session_state.new_password
 strength_score = 0
@@ -59,37 +66,52 @@ if password:
 update_disabled = strength_score < 4
 
 if st.button("Update Password", disabled=update_disabled):
+
     success, message = pm.set_password(password)
 
     if success:
+        st.success("Password updated successfully")
+
         st.session_state.verification_required = True
-        st.success("Password updated. Please verify to confirm.")
+
+        time.sleep(1)
+
+        st.rerun()
+
     else:
         st.error(message)
 
+
 if st.session_state.verification_required:
+
     st.divider()
     st.subheader("Verify Password")
 
-    st.session_state.verify_password = st.text_input(
+    st.text_input(
         "Re-enter password to confirm",
         type="password",
-        key="verify_password_input"
+        key="verify_password"
     )
 
     if st.button("Confirm Password"):
-        verified, message = pm.verify_password(st.session_state.verify_password)
+
+        verified, message = pm.verify_password(
+            st.session_state.verify_password
+        )
 
         if verified:
-            st.success("Password confirmed successfully.")
 
-            st.session_state.new_password = ""
-            st.session_state.verify_password = ""
-            st.session_state.verification_required = False
+            st.success("Password confirmed successfully")
+
+            time.sleep(1.5)
+
+            st.session_state.clear()
 
             st.rerun()
+
         else:
             st.error(message)
+
 
 st.divider()
 st.subheader("Statistics")
