@@ -1,5 +1,8 @@
 import streamlit as st
 from passwordmanager import PasswordManager
+from dashboard import render_dashboard
+from datetime import datetime
+
 
 st.set_page_config(page_title="Password Manager", layout="centered")
 
@@ -48,6 +51,9 @@ if not st.session_state.logged_in:
 
 #  VAULT SECTION 
 else:
+    #  Dashboard 
+    render_dashboard(pm)
+
 
     st.markdown("### Add New Password")
     if "success_msg" not in st.session_state:
@@ -128,6 +134,14 @@ else:
     st.markdown("###  Stored Passwords")
 
     entries = pm.get_entries()
+    entries = pm.get_entries()
+
+    # Password reuse detection
+    password_counts = {}
+
+    for entry in entries:
+        pwd = entry["password"]
+        password_counts[pwd] = password_counts.get(pwd, 0) + 1
 
     if not entries:
         st.info("No passwords saved yet.")
@@ -136,6 +150,30 @@ else:
             with st.expander(f" {entry['site']} ({entry['username']})"):
 
                 st.write(f" Username: {entry['username']}")
+
+                if entry.get("updated_at"):
+                    updated_time = datetime.strptime(entry["updated_at"], "%Y-%m-%d %H:%M:%S")
+                    days_ago = (datetime.now() - updated_time).days
+
+                    st.write(f"Last updated: {days_ago} days ago")
+
+                    if days_ago > 90:
+                        st.warning("This password is old — consider updating")
+
+                strength = pm.calculate_strength(entry["password"])
+                label = pm.strength_label(strength)
+
+                st.write(f"Strength: {label}")
+
+                if strength <= 2:
+                    st.warning("Weak password — consider updating")
+                elif strength in (3, 4):
+                    st.info("Medium strength — could be stronger")
+                else:
+                    st.success("Strong password")
+
+                if password_counts[entry["password"]] > 1:
+                 st.error("Password reused across multiple accounts")
 
                 # Mask password by default
                 toggle_key = f"toggle_{i}"

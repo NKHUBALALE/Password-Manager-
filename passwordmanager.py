@@ -181,9 +181,10 @@ class PasswordManager:
             decrypted = self._decrypt(item["password"], self.key)
 
             result.append({
-                "site": item["site"],
-                "username": item["username"],
-                "password": decrypted
-            })
+                    "site": item["site"],
+                    "username": item["username"],
+                    "password": decrypted,
+                    "updated_at": item.get("updated_at")
+                })
 
         return result
