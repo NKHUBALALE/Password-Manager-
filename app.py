@@ -62,6 +62,18 @@ else:
     username = st.text_input("Username / Email")
     password = st.text_input("Password", type="password", key="password_input")
 
+    if password:
+        strength = pm.calculate_strength(password)
+        label = pm.strength_label(strength)
+
+        st.progress(strength / 5)
+        st.write(f"Strength: {label}")
+
+        if strength <= 2:
+            st.warning("Weak password. Add uppercase letters, numbers, or symbols.")
+        elif strength == 3:
+            st.info("Medium strength. Consider making it stronger.")
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -74,13 +86,19 @@ else:
             if not site or not username or not password:
                 st.error("All fields are required.")
             else:
-                success, msg = pm.add_entry(site, username, password)
+                strength = pm.calculate_strength(password)
+                label = pm.strength_label(strength)
 
-                if success:
-                    st.success(msg)
-                    st.rerun()
+                if strength < 4:
+                    st.error(f"Password is too weak ({label}). Please choose a stronger password.")
                 else:
-                    st.error(msg)
+                    success, msg = pm.add_entry(site, username, password)
+
+                    if success:
+                        st.success(msg)
+                        st.rerun()
+                    else:
+                        st.error(msg)
 
     if "generated_pwd" in st.session_state:
         st.info(f"Generated: {st.session_state['generated_pwd']}")
