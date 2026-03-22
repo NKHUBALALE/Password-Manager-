@@ -1,7 +1,8 @@
 import streamlit as st
 from passwordmanager import PasswordManager
 from dashboard import render_dashboard
-from datetime import datetime
+from forms import render_add_password
+from vault_ui import render_vault
 
 
 st.set_page_config(page_title="Password Manager", layout="centered")
@@ -56,140 +57,14 @@ else:
 
 
     st.markdown("### Add New Password")
-    if "success_msg" not in st.session_state:
-        st.session_state.success_msg = ""
-
-    if "confirm_update" not in st.session_state:
-        st.session_state.confirm_update = False
-
-    if st.session_state.success_msg:
-        st.success(st.session_state.success_msg)
-        st.session_state.success_msg = ""
-
-    if "generate_clicked" not in st.session_state:
-        st.session_state.generate_clicked = False
-
-    if st.session_state.generate_clicked:
-        generated = pm.generate_password()
-        st.session_state["password_input"] = generated
-        st.session_state["generated_pwd"] = generated
-        st.session_state.generate_clicked = False
-
-    #  Inputs 
-    site = st.text_input("Site (e.g. gmail.com)")
-    username = st.text_input("Username / Email")
-    password = st.text_input("Password", type="password", key="password_input")
-
-    if password:
-        strength = pm.calculate_strength(password)
-        label = pm.strength_label(strength)
-
-        st.progress(strength / 5)
-        st.write(f"Strength: {label}")
-
-        if strength <= 2:
-            st.warning("Weak password. Add uppercase letters, numbers, or symbols.")
-        elif strength == 3:
-            st.info("Medium strength. Consider making it stronger.")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("Auto-Generate Strong Password"):
-            st.session_state.generate_clicked = True
-            st.rerun()
-
-    with col2:
-        if st.button("Save Password"):
-
-            if not site or not username or not password:
-                st.error("All fields are required.")
-
-            else:
-                strength = pm.calculate_strength(password)
-                label = pm.strength_label(strength)
-
-                if strength < 4:
-                    st.error(f"Password is too weak ({label}). Please choose a stronger password.")
-
-                else:
-                    if pm.entry_exists(site, username) and not st.session_state.confirm_update:
-                        st.session_state.confirm_update = True
-                        st.warning("This account already exists. Click save again to confirm update.")
-
-                    else:
-                        success, msg = pm.add_entry(site, username, password)
-
-                        if success:
-                            st.session_state.confirm_update = False
-                            show_success(msg)
-                        else:
-                            st.error(msg)
-
-    if "generated_pwd" in st.session_state:
-        st.info(f"Generated: {st.session_state['generated_pwd']}")
+    render_add_password(pm, show_success)
 
     st.divider()
 
     st.markdown("###  Stored Passwords")
 
     entries = pm.get_entries()
-    entries = pm.get_entries()
-
-    # Password reuse detection
-    password_counts = {}
-
-    for entry in entries:
-        pwd = entry["password"]
-        password_counts[pwd] = password_counts.get(pwd, 0) + 1
-
-    if not entries:
-        st.info("No passwords saved yet.")
-    else:
-        for i, entry in enumerate(entries):
-            with st.expander(f" {entry['site']} ({entry['username']})"):
-
-                st.write(f" Username: {entry['username']}")
-
-                if entry.get("updated_at"):
-                    updated_time = datetime.strptime(entry["updated_at"], "%Y-%m-%d %H:%M:%S")
-                    days_ago = (datetime.now() - updated_time).days
-
-                    st.write(f"Last updated: {days_ago} days ago")
-
-                    if days_ago > 90:
-                        st.warning("This password is old — consider updating")
-
-                strength = pm.calculate_strength(entry["password"])
-                label = pm.strength_label(strength)
-
-                st.write(f"Strength: {label}")
-
-                if strength <= 2:
-                    st.warning("Weak password — consider updating")
-                elif strength in (3, 4):
-                    st.info("Medium strength — could be stronger")
-                else:
-                    st.success("Strong password")
-
-                if password_counts[entry["password"]] > 1:
-                 st.error("Password reused across multiple accounts")
-
-                # Mask password by default
-                toggle_key = f"toggle_{i}"
-                state_key = f"show_state_{i}"
-
-                if state_key not in st.session_state:
-                    st.session_state[state_key] = False
-
-                if st.button(" Show / Hide Password", key=toggle_key):
-                    st.session_state[state_key] = not st.session_state[state_key]
-
-                if st.session_state[state_key]:
-                    st.success(f" {entry['password']}")
-                else:
-                    st.write(" ********")
-
+    render_vault(entries, pm)
     st.divider()
 
     #  Logout 
