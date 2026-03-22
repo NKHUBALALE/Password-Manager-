@@ -6,7 +6,7 @@ import random
 import string
 from cryptography.fernet import Fernet
 import base64
-
+from datetime import datetime
 
 class PasswordManager:
     def __init__(self):
@@ -128,6 +128,8 @@ class PasswordManager:
         self.failed_attempts = 0
         self.locked = False
 
+    
+
     def add_entry(self, site, username, password):
         if self.key is None or self.current_user is None:
             return False, "You must log in first."
@@ -136,20 +138,37 @@ class PasswordManager:
 
         for entry in user_vault:
             if entry["site"] == site and entry["username"] == username:
-                return False, "This account already exists."
+                # 🔥 UPDATE instead of reject
+                entry["password"] = self._encrypt(password, self.key)
+                entry["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+                self._save()
+                return True, "Password updated successfully."
+
+        # ➕ Create new entry
         encrypted_password = self._encrypt(password, self.key)
 
         user_vault.append({
             "site": site,
             "username": username,
-            "password": encrypted_password
+            "password": encrypted_password,
+            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
 
         self._save()
-        return True, "Saved successfully."
+        return True, "Password saved successfully."
 
+    def entry_exists(self, site, username):
+        if self.current_user is None:
+            return False
 
+        user_vault = self.data["users"][self.current_user]["vault"]
+
+        for entry in user_vault:
+            if entry["site"] == site and entry["username"] == username:
+                return True
+
+        return False
     def get_entries(self):
         if self.key is None or self.current_user is None:
             return []

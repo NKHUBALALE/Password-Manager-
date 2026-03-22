@@ -12,6 +12,9 @@ if "logged_in" not in st.session_state:
 
 pm = st.session_state.pm
 
+def show_success(msg):
+    st.session_state.success_msg = msg
+    st.rerun()
 #  TITLE 
 st.title(" Password Manager")
 
@@ -47,6 +50,15 @@ if not st.session_state.logged_in:
 else:
 
     st.markdown("### Add New Password")
+    if "success_msg" not in st.session_state:
+        st.session_state.success_msg = ""
+
+    if "confirm_update" not in st.session_state:
+        st.session_state.confirm_update = False
+
+    if st.session_state.success_msg:
+        st.success(st.session_state.success_msg)
+        st.session_state.success_msg = ""
 
     if "generate_clicked" not in st.session_state:
         st.session_state.generate_clicked = False
@@ -83,22 +95,30 @@ else:
 
     with col2:
         if st.button("Save Password"):
+
             if not site or not username or not password:
                 st.error("All fields are required.")
+
             else:
                 strength = pm.calculate_strength(password)
                 label = pm.strength_label(strength)
 
                 if strength < 4:
                     st.error(f"Password is too weak ({label}). Please choose a stronger password.")
-                else:
-                    success, msg = pm.add_entry(site, username, password)
 
-                    if success:
-                        st.success(msg)
-                        st.rerun()
+                else:
+                    if pm.entry_exists(site, username) and not st.session_state.confirm_update:
+                        st.session_state.confirm_update = True
+                        st.warning("This account already exists. Click save again to confirm update.")
+
                     else:
-                        st.error(msg)
+                        success, msg = pm.add_entry(site, username, password)
+
+                        if success:
+                            st.session_state.confirm_update = False
+                            show_success(msg)
+                        else:
+                            st.error(msg)
 
     if "generated_pwd" in st.session_state:
         st.info(f"Generated: {st.session_state['generated_pwd']}")
