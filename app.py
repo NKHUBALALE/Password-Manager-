@@ -1,118 +1,123 @@
 import streamlit as st
-import time
 from passwordmanager import PasswordManager
 
 st.set_page_config(page_title="Password Manager", layout="centered")
 
+#  SESSION STATE 
 if "pm" not in st.session_state:
     st.session_state.pm = PasswordManager()
 
-if "verification_required" not in st.session_state:
-    st.session_state.verification_required = False
-
-if "new_password" not in st.session_state:
-    st.session_state.new_password = ""
-
-if "verify_password" not in st.session_state:
-    st.session_state.verify_password = ""
-
-if "generated_password" not in st.session_state:
-    st.session_state.generated_password = ""
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
 pm = st.session_state.pm
 
-st.title("Password Manager")
+#  TITLE 
+st.title(" Password Manager")
 
-st.subheader("Set New Password")
+#  AUTH SECTION 
+if not st.session_state.logged_in:
 
-st.info(
-    "Password rules:\n"
-    "- Minimum 8 characters\n"
-    "- At least one lowercase letter\n"
-    "- At least one uppercase letter\n"
-    "- At least one number\n"
-    "- At least one special character\n"
-    "- Must satisfy at least 4 of the rules"
-)
+    st.subheader("Login / Register")
 
-st.markdown("### Need help?")
+    username = st.text_input("Username")
+    password = st.text_input("Master Password", type="password")
 
-if st.button("Generate strong password"):
-    pwd = pm.generate_password()
-    st.session_state.new_password = pwd
-    st.session_state.generated_password = pwd
+    col1, col2 = st.columns(2)
 
-if st.session_state.generated_password:
-    st.success(
-        f"Generated password: {st.session_state.generated_password}"
-    )
+    with col1:
+        if st.button("Register"):
+            success, msg = pm.register_user(username, password)
+            if success:
+                st.success(msg)
+            else:
+                st.error(msg)
 
-st.text_input(
-    "Enter new password",
-    type="password",
-    key="new_password"
-)
+    with col2:
+        if st.button("Login"):
+            success, msg = pm.login(username, password)
+            if success:
+                st.session_state.logged_in = True
+                st.success(msg)
+                st.rerun()
+            else:
+                st.error(msg)
 
-password = st.session_state.new_password
-strength_score = 0
+#  VAULT SECTION 
+else:
 
-if password:
-    strength_score = pm.calculate_strength(password)
-    strength_label = pm.strength_label(strength_score)
+    st.markdown("### Add New Password")
 
-    st.progress(strength_score / 5)
-    st.write(f"Strength: {strength_label}")
+    if "generate_clicked" not in st.session_state:
+        st.session_state.generate_clicked = False
 
-update_disabled = strength_score < 4
+    if st.session_state.generate_clicked:
+        generated = pm.generate_password()
+        st.session_state["password_input"] = generated
+        st.session_state["generated_pwd"] = generated
+        st.session_state.generate_clicked = False
 
-if st.button("Update Password", disabled=update_disabled):
+    #  Inputs 
+    site = st.text_input("Site (e.g. gmail.com)")
+    username = st.text_input("Username / Email")
+    password = st.text_input("Password", type="password", key="password_input")
 
-    success, message = pm.set_password(password)
+    col1, col2 = st.columns(2)
 
-    if success:
-        st.success("Password updated successfully")
-
-        st.session_state.verification_required = True
-
-        time.sleep(1)
-
-        st.rerun()
-
-    else:
-        st.error(message)
-
-
-if st.session_state.verification_required:
-
-    st.divider()
-    st.subheader("Verify Password")
-
-    st.text_input(
-        "Re-enter password to confirm",
-        type="password",
-        key="verify_password"
-    )
-
-    if st.button("Confirm Password"):
-
-        verified, message = pm.verify_password(
-            st.session_state.verify_password
-        )
-
-        if verified:
-
-            st.success("Password confirmed successfully")
-
-            time.sleep(1.5)
-
-            st.session_state.clear()
-
+    with col1:
+        if st.button("Auto-Generate Strong Password"):
+            st.session_state.generate_clicked = True
             st.rerun()
 
-        else:
-            st.error(message)
+    with col2:
+        if st.button("Save Password"):
+            if not site or not username or not password:
+                st.error("All fields are required.")
+            else:
+                success, msg = pm.add_entry(site, username, password)
 
+                if success:
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
 
-st.divider()
-st.subheader("Statistics")
-st.write("Total password changes:", pm.get_password_count())
+    if "generated_pwd" in st.session_state:
+        st.info(f"Generated: {st.session_state['generated_pwd']}")
+
+    st.divider()
+
+    st.markdown("###  Stored Passwords")
+
+    entries = pm.get_entries()
+
+    if not entries:
+        st.info("No passwords saved yet.")
+    else:
+        for i, entry in enumerate(entries):
+            with st.expander(f" {entry['site']} ({entry['username']})"):
+
+                st.write(f" Username: {entry['username']}")
+
+                # Mask password by default
+                toggle_key = f"toggle_{i}"
+                state_key = f"show_state_{i}"
+
+                if state_key not in st.session_state:
+                    st.session_state[state_key] = False
+
+                if st.button(" Show / Hide Password", key=toggle_key):
+                    st.session_state[state_key] = not st.session_state[state_key]
+
+                if st.session_state[state_key]:
+                    st.success(f" {entry['password']}")
+                else:
+                    st.write(" ********")
+
+    st.divider()
+
+    #  Logout 
+    if st.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.clear()
+        st.rerun()
